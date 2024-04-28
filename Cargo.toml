@@ -1,0 +1,27 @@
+[package]
+name = "snowbreak_gacha_export"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4.38"
+anyhow = "1"
+image = "0.25.1"
+paddleocr = "0.4.1"
+base64 = "0.22.0"
+imageproc = "0.24.0"
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+csv = "1"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3.30"
+lazy_static = "1"
+client_capture = { path = "../client_capture" }
+window_inspector = { git = "https://github.com/enximi/window_inspector" }
+log = "0.4.21"
+env_logger = "0.11.3"
+enigo = "0.2.0"
+crossterm = "0.27.0"
+admin_runner = { git = "https://github.com/enximi/admin_runner" }
