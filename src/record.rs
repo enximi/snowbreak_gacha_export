@@ -463,6 +463,6 @@ impl GachaRecords {
 
     /// 距离四星保底还有多少次
     pub fn count_to_4_star_pity(&self, index: u32) -> u32 {
-        self.banner_type.pity_count() - self.count_after_4_star(index)
+        10 - self.count_after_4_star(index)
     }
 }

@@ -203,21 +203,7 @@ async fn main() {
         BannerType::StandardWeapon => "standard_weapon",
         BannerType::Novice => "novice",
     };
-    // 文件是否存在
-    let old_gacha_records =
-        if std::path::Path::new(&format!("{}/{}.csv", save_floder, file_name)).exists() {
-            // 读取抽卡记录
-            let mut reader =
-                csv::Reader::from_path(format!("{}/{}.csv", save_floder, file_name)).unwrap();
-            let mut old_gacha_records = vec![];
-            for result in reader.deserialize() {
-                let record: GachaRecord = result.unwrap();
-                old_gacha_records.push(record);
-            }
-            old_gacha_records
-        } else {
-            vec![]
-        };
+    let old_gacha_records = get_gache_records_from_file(user_selected_banner_type);
 
     // 合并抽卡记录
     let merged_gacha_records = match merge_gacha_records(&gacha_records, &old_gacha_records) {

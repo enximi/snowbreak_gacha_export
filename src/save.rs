@@ -33,8 +33,8 @@ pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
         worksheet.set_column_width(5, 14).unwrap();
         worksheet.write(0, 6, "4星保底内抽数").unwrap();
         worksheet.set_column_width(6, 14).unwrap();
-        worksheet.write(0, 7, "距4星保底还剩").unwrap();
-        worksheet.set_column_width(7, 14).unwrap();
+        // worksheet.write(0, 7, "距4星保底还剩").unwrap();
+        // worksheet.set_column_width(7, 14).unwrap();
         let records = GachaRecords::new(
             banner_type,
             records.get(&banner_type).unwrap_or(&vec![]).clone(),
@@ -69,9 +69,9 @@ pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
             worksheet
                 .write_with_format(i + 1, 6, records.count_after_4_star(i), format)
                 .unwrap();
-            worksheet
-                .write_with_format(i + 1, 7, records.count_to_4_star_pity(i), format)
-                .unwrap();
+            // worksheet
+            //     .write_with_format(i + 1, 7, records.count_to_4_star_pity(i), format)
+            //     .unwrap();
         }
     });
     workbook.save("gacha_records.xlsx").unwrap()
