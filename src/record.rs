@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use chrono::{Local, TimeZone};
 use image::{DynamicImage, GenericImageView};
-use imageproc::contrast::threshold;
 use lazy_static::lazy_static;
+use serde_json::Value;
 use tokio::spawn;
 
 use crate::ocr_server;
@@ -12,12 +12,13 @@ use crate::ocr_server::OcrClient;
 
 lazy_static! {
     static ref OCR_CLIENT: Arc<Mutex<OcrClient>> = {
-        let (_server1_handle, _server2_handle, ocr_client) = ocr_server::run_server();
+        let (_, _, ocr_client) = ocr_server::run_server();
         Arc::new(Mutex::new(ocr_client))
     };
 }
 
 /// 卡池类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum BannerType {
     /// 新手
     Novice,
@@ -43,14 +44,14 @@ pub enum ItemType {
 /// 抽卡记录
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct GachaRecord {
-    star: u8,
-    item_name: String,
-    item_type: ItemType,
-    timestamp: u64,
+    pub star: u8,
+    pub item_name: String,
+    pub item_type: ItemType,
+    pub timestamp: u64,
 }
 
 impl GachaRecord {
-    fn new(star: u8, item_name: String, item_type: ItemType, timestamp: u64) -> Self {
+    pub fn new(star: u8, item_name: String, item_type: ItemType, timestamp: u64) -> Self {
         Self {
             star,
             item_name,
@@ -59,14 +60,15 @@ impl GachaRecord {
         }
     }
 
-    fn readable_item_type_str(&self) -> &str {
+    pub fn readable_item_type_str(&self) -> String {
         match self.item_type {
             ItemType::Character => "角色",
             ItemType::Weapon => "武器",
         }
+        .to_string()
     }
 
-    fn readable_date_time_str(&self) -> String {
+    pub fn readable_date_time_str(&self) -> String {
         let date_time = Local
             .timestamp_opt(self.timestamp as i64, 0)
             .single()
@@ -92,7 +94,7 @@ impl OneRecordImage {
     }
 
     /// 星级
-    fn star(&self) -> anyhow::Result<u8> {
+    fn star(&self) -> Result<u8> {
         let star_color = self.star_color();
         let star3_color = (55, 98, 242);
         let star4_color = (192, 105, 214);
@@ -115,10 +117,11 @@ impl OneRecordImage {
     }
 
     /// 物品名称
-    async fn item_name(&self) -> anyhow::Result<String> {
+    pub async fn item_name(&self) -> Result<String> {
         let item_name_img = self.item_name_image();
         let item_name_rx = OCR_CLIENT.lock().unwrap().send(item_name_img);
-        item_name_rx.await?
+        let data = item_name_rx.await??;
+        get_string_from_data(data, false)
     }
 
     /// 物品类型图片
@@ -127,10 +130,11 @@ impl OneRecordImage {
     }
 
     /// 物品类型
-    async fn item_type(&self) -> anyhow::Result<ItemType> {
+    async fn item_type(&self) -> Result<ItemType> {
         let item_type_img = self.item_type_image();
         let item_type_rx = OCR_CLIENT.lock().unwrap().send(item_type_img);
-        let item_type_str = item_type_rx.await??;
+        let data = item_type_rx.await??;
+        let item_type_str = get_string_from_data(data, false)?;
         match item_type_str.as_str() {
             "角色" => Ok(ItemType::Character),
             "武器" => Ok(ItemType::Weapon),
@@ -138,35 +142,20 @@ impl OneRecordImage {
         }
     }
 
-    /// 日期图片
-    fn date_image(&self) -> DynamicImage {
-        self.img.crop_imm(1020, 0, 120, self.img.height())
+    pub fn time_img(&self) -> DynamicImage {
+        self.img.crop_imm(1020, 0, 184, self.img.height())
     }
 
-    /// 日期字符串
-    async fn date_string(&self) -> anyhow::Result<String> {
-        let date_img = self.date_image();
-        let date_rx = OCR_CLIENT.lock().unwrap().send(date_img);
-        date_rx.await?
-    }
-
-    /// 时间图片
-    fn time_image(&self) -> DynamicImage {
-        self.img.crop_imm(1141, 0, 63, self.img.height())
-    }
-
-    /// 时间字符串
-    async fn time_string(&self) -> anyhow::Result<String> {
-        let time_img = self.time_image();
-        let time_rx = OCR_CLIENT.lock().unwrap().send(time_img);
-        time_rx.await?
+    pub async fn time_str(&self) -> Result<String> {
+        let time_img = self.time_img();
+        let time_str_rx = OCR_CLIENT.lock().unwrap().send(time_img);
+        let data = time_str_rx.await??;
+        get_string_from_data(data, true)
     }
 
     /// 时间戳
-    async fn timestamp(&self) -> anyhow::Result<u64> {
-        let date_str = self.date_string().await?;
-        let time_str = self.time_string().await?;
-        let date_time_str = format!("{} {}", date_str, time_str);
+    async fn timestamp(&self) -> Result<u64> {
+        let date_time_str = self.time_str().await?;
         let date_time = chrono::NaiveDateTime::parse_from_str(&date_time_str, "%Y-%m-%d %H:%M")
             .map_err(|e| anyhow!("Failed to parse date time: {:?}", e))?;
         let local_date_time = Local
@@ -177,7 +166,7 @@ impl OneRecordImage {
     }
 
     /// 抽卡记录
-    async fn gacha_record(&self) -> anyhow::Result<GachaRecord> {
+    async fn gacha_record(&self) -> Result<GachaRecord> {
         let star = self.star()?;
         let item_name = self.item_name().await?;
         let item_type = self.item_type().await?;
@@ -188,16 +177,18 @@ impl OneRecordImage {
 
 /// 合并抽卡记录
 /// 两个抽卡记录按时间顺序合并
+/// # 返回
+/// （合并后的抽卡记录，新增抽卡记录数量）
 pub fn merge_gacha_records(
     new_records: &[GachaRecord],
     old_records: &[GachaRecord],
-) -> Vec<GachaRecord> {
+) -> Result<(Vec<GachaRecord>, u32)> {
     // 抽卡记录是按时间倒序排列的，最新的在最前面
     if new_records.is_empty() {
-        return old_records.to_vec();
+        return Ok((old_records.to_vec(), 0));
     }
     if old_records.is_empty() {
-        return new_records.to_vec();
+        return Ok((new_records.to_vec(), new_records.len() as u32));
     }
 
     // 现在不知道那个抽卡记录是新的
@@ -234,9 +225,25 @@ pub fn merge_gacha_records(
         .cloned()
         .collect();
 
-    merged_records
+    // 检查时间戳是递减的
+    let is_timestamp_desc = |records: &Vec<GachaRecord>| -> bool {
+        for i in 1..records.len() {
+            if records[i].timestamp > records[i - 1].timestamp {
+                return false;
+            }
+        }
+        true
+    };
+    if !is_timestamp_desc(&merged_records) {
+        return Err(anyhow!("Invalid merged records: {:?}", merged_records));
+    }
+
+    let add_num = (new_records_len - same_num) as u32;
+
+    Ok((merged_records, add_num))
 }
 
+#[derive(Clone)]
 pub struct RecordScreen {
     img: DynamicImage,
 }
@@ -246,19 +253,22 @@ impl RecordScreen {
         Self { img }
     }
 
-    fn index_image(&self) -> DynamicImage {
-        let img = self.img.crop_imm(1635, 490, 60, 60);
-        let img = threshold(&img.to_luma8(), 200);
-        DynamicImage::ImageLuma8(img)
+    pub fn img(&self) -> &DynamicImage {
+        &self.img
     }
 
-    async fn index_string(&self) -> anyhow::Result<String> {
+    fn index_image(&self) -> DynamicImage {
+        self.img.crop_imm(1625, 480, 80, 80)
+    }
+
+    async fn index_string(&self) -> Result<String> {
         let index_img = self.index_image();
         let index_rx = OCR_CLIENT.lock().unwrap().send(index_img);
-        index_rx.await?
+        let data = index_rx.await??;
+        get_string_from_data(data, false)
     }
 
-    pub async fn index(&self) -> anyhow::Result<u32> {
+    pub async fn index(&self) -> Result<u32> {
         let index_str = self.index_string().await?;
         let index = index_str
             .parse()
@@ -266,7 +276,7 @@ impl RecordScreen {
         Ok(index)
     }
 
-    fn record_images(&self) -> anyhow::Result<Vec<DynamicImage>> {
+    fn record_images(&self) -> Result<Vec<DynamicImage>> {
         let record_width = 1228;
         let record_height = 45;
         let record_x = 349;
@@ -282,10 +292,10 @@ impl RecordScreen {
                     .img
                     .crop_imm(record_x, record_y, record_width, record_height))
             })
-            .collect::<anyhow::Result<Vec<DynamicImage>>>()
+            .collect::<Result<Vec<DynamicImage>>>()
     }
 
-    fn one_record_images(&self) -> anyhow::Result<Vec<OneRecordImage>> {
+    pub fn one_record_images(&self) -> Result<Vec<OneRecordImage>> {
         let record_images = self.record_images()?;
         let one_record_images = record_images
             .iter()
@@ -294,7 +304,7 @@ impl RecordScreen {
         Ok(one_record_images)
     }
 
-    pub async fn gacha_records(&self) -> anyhow::Result<Vec<GachaRecord>> {
+    pub async fn gacha_records(&self) -> Result<Vec<GachaRecord>> {
         let one_record_images = self.one_record_images()?;
         let handles = one_record_images
             .into_iter()
@@ -306,6 +316,42 @@ impl RecordScreen {
             .take_while(|result| result.is_ok())
             .map(|result| result.unwrap())
             .take_while(|record| record.is_ok())
-            .collect::<anyhow::Result<Vec<GachaRecord>>>()
+            .collect::<Result<Vec<GachaRecord>>>()
+    }
+}
+
+fn get_string_from_data(data: Vec<Value>, is_date_time: bool) -> Result<String> {
+    let get_item_1_text = |data: &Vec<Value>| -> Result<String> {
+        let item1 = match data.first() {
+            Some(item1) => item1,
+            None => {
+                return Err(anyhow!("Failed to get item1 from data: {:?}", data));
+            }
+        };
+        let item1_text = match item1["text"].as_str() {
+            Some(item1_text) => item1_text,
+            None => {
+                return Err(anyhow!("Failed to get text from item1: {:?}", item1));
+            }
+        };
+        Ok(item1_text.to_string())
+    };
+    if is_date_time && data.len() >= 2 {
+        let item1_text = get_item_1_text(&data)?;
+        let item2 = match data.get(1) {
+            Some(item2) => item2,
+            None => {
+                return Err(anyhow!("Failed to get item2 from data: {:?}", data));
+            }
+        };
+        let item2_text = match item2["text"].as_str() {
+            Some(item2_text) => item2_text,
+            None => {
+                return Err(anyhow!("Failed to get text from item2: {:?}", item2));
+            }
+        };
+        Ok(format!("{} {}", item1_text, item2_text))
+    } else {
+        get_item_1_text(&data)
     }
 }
