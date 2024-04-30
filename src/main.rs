@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use admin_runner::{is_admin, run_as_admin};
 use anyhow::{anyhow, Result};
 use enigo::Coordinate::Abs;
 use enigo::{Button, Direction::Click, Enigo, Mouse, Settings};
+use enum_iterator::all;
 use image::DynamicImage;
 use tokio::spawn;
 use tokio::time::sleep;
@@ -15,9 +17,11 @@ use window_inspector::top_most::{cancel_window_top_most, set_window_top_most};
 use xcap::Window;
 
 use crate::record::{merge_gacha_records, BannerType, GachaRecord, RecordScreen};
+use crate::save::{get_gache_records_from_file, save_excel};
 
 mod ocr_server;
 mod record;
+mod save;
 
 #[tokio::main]
 async fn main() {
@@ -63,7 +67,7 @@ async fn main() {
     );
 
     consume_all_events();
-    let banner_type = loop {
+    let user_selected_banner_type = loop {
         if let Ok(crossterm::event::Event::Key(event)) = crossterm::event::read() {
             match event.code {
                 crossterm::event::KeyCode::Char('1') => break BannerType::LimitedTimeCharacter,
@@ -79,7 +83,7 @@ async fn main() {
         }
     };
 
-    log::info!("Selected banner type: {:?}", banner_type);
+    log::info!("Selected banner type: {:?}", user_selected_banner_type);
 
     // 游戏窗口置顶
     set_window_top_most(hwnd).unwrap();
@@ -192,7 +196,7 @@ async fn main() {
         std::fs::create_dir(save_floder).unwrap();
     }
     // 根据卡池类型获取文件名
-    let file_name = match banner_type {
+    let file_name = match user_selected_banner_type {
         BannerType::LimitedTimeCharacter => "limited_time_character",
         BannerType::LimitedTimeWeapon => "limited_time_weapon",
         BannerType::StandardCharacter => "standard_character",
@@ -284,28 +288,16 @@ async fn main() {
         timestamp
     );
 
-    // 再保存一份可读性较好的抽卡记录
-    let mut writer =
-        csv::Writer::from_path(format!("{}/{}_readable.csv", save_floder, file_name)).unwrap();
-    writer
-        .write_record(["星级", "物品名称", "物品类型", "时间"])
-        .unwrap();
-    for record in &merged_gacha_records {
-        writer
-            .write_record(&[
-                record.star.to_string(),
-                record.item_name.clone(),
-                record.readable_item_type_str(),
-                record.readable_date_time_str(),
-            ])
-            .unwrap();
-    }
-    writer.flush().unwrap();
-    log::info!(
-        "Save gacha records to {}/{}_readable.csv",
-        save_floder,
-        file_name
-    );
+    let mut records = HashMap::new();
+    all::<BannerType>().for_each(|banner_type: BannerType| {
+        if banner_type != user_selected_banner_type {
+            records.insert(banner_type, get_gache_records_from_file(banner_type));
+        }
+    });
+    records.insert(user_selected_banner_type, merged_gacha_records);
+
+    save_excel(records);
+    log::info!("Save excel to gacha_records.xlsx");
 
     // 按任意键退出
     wait_any_key();

@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, Result};
 use chrono::{Local, TimeZone};
+use enum_iterator::Sequence;
 use image::{DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use serde_json::Value;
@@ -18,18 +19,52 @@ lazy_static! {
 }
 
 /// 卡池类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, Sequence,
+)]
 pub enum BannerType {
-    /// 新手
-    Novice,
-    /// 角色常驻
-    StandardCharacter,
-    /// 武器常驻
-    StandardWeapon,
     /// 角色活动
     LimitedTimeCharacter,
     /// 武器活动
     LimitedTimeWeapon,
+    /// 角色常驻
+    StandardCharacter,
+    /// 武器常驻
+    StandardWeapon,
+    /// 新手
+    Novice,
+}
+
+impl BannerType {
+    pub fn chinese_display_name(&self) -> String {
+        match self {
+            BannerType::LimitedTimeCharacter => "限定角色池",
+            BannerType::LimitedTimeWeapon => "限定武器池",
+            BannerType::StandardCharacter => "常驻角色池",
+            BannerType::StandardWeapon => "常驻武器池",
+            BannerType::Novice => "新手池",
+        }
+        .to_string()
+    }
+    
+    pub fn save_file_name(&self) -> String {
+        match self {
+            BannerType::LimitedTimeCharacter => "limited_time_character",
+            BannerType::LimitedTimeWeapon => "limited_time_weapon",
+            BannerType::StandardCharacter => "standard_character",
+            BannerType::StandardWeapon => "standard_weapon",
+            BannerType::Novice => "novice",
+        }
+        .to_string()
+    }
+
+    pub fn pity_count(&self) -> u32 {
+        match self {
+            BannerType::LimitedTimeCharacter | BannerType::LimitedTimeWeapon => 80,
+            BannerType::StandardCharacter | BannerType::StandardWeapon => 60,
+            BannerType::Novice => 50,
+        }
+    }
 }
 
 /// 抽卡物品类型
@@ -39,6 +74,16 @@ pub enum ItemType {
     Character,
     /// 武器
     Weapon,
+}
+
+impl ItemType {
+    pub fn chinese_display_name(&self) -> String {
+        match self {
+            ItemType::Character => "角色",
+            ItemType::Weapon => "武器",
+        }
+        .to_string()
+    }
 }
 
 /// 抽卡记录
@@ -172,6 +217,14 @@ impl OneRecordImage {
         let item_type = self.item_type().await?;
         let timestamp = self.timestamp().await?;
         Ok(GachaRecord::new(star, item_name, item_type, timestamp))
+        // 得想个办法让这里也可以并行
+        // let item_name_handle = spawn(async { self.item_name().await });
+        // let item_type_handle = spawn(async { self.item_type().await });
+        // let timestamp_handle = spawn(async { self.timestamp().await });
+        // let item_name = item_name_handle.await??;
+        // let item_type = item_type_handle.await??;
+        // let timestamp = timestamp_handle.await??;
+        // Ok(GachaRecord::new(star, item_name, item_type, timestamp))
     }
 }
 
@@ -353,5 +406,63 @@ fn get_string_from_data(data: Vec<Value>, is_date_time: bool) -> Result<String> 
         Ok(format!("{} {}", item1_text, item2_text))
     } else {
         get_item_1_text(&data)
+    }
+}
+
+pub struct GachaRecords {
+    banner_type: BannerType,
+    records: Vec<GachaRecord>,
+}
+
+impl GachaRecords {
+    pub fn new(banner_type: BannerType, records: Vec<GachaRecord>) -> Self {
+        Self {
+            banner_type,
+            records,
+        }
+    }
+
+    pub fn banner_type(&self) -> BannerType {
+        self.banner_type
+    }
+    
+    pub fn records(&self) -> &Vec<GachaRecord> {
+        &self.records
+    }
+
+    /// 第 index 条记录是上次 5 星之后的第几条记录
+    pub fn count_after_5_star(&self, index: u32) -> u32 {
+        let mut index_ = index as usize;
+        index_ += 1;
+        while index_ < self.records.len() {
+            if self.records[index_].star == 5 {
+                return index_ as u32 - index;
+            }
+            index_ += 1;
+        }
+        index_ as u32 - index
+    }
+
+    /// 第 index 条记录是上次 4 星之后的第几条记录
+    pub fn count_after_4_star(&self, index: u32) -> u32 {
+        let mut index_ = index as usize;
+        index_ += 1;
+        while index_ < self.records.len() {
+            if self.records[index_].star == 4 {
+                return index_ as u32 - index;
+            }
+            index_ += 1;
+        }
+        index_ as u32 - index
+    }
+
+    /// 距离五星保底还有多少次
+    pub fn count_to_5_star_pity(&self, index: u32) -> u32 {
+        self.banner_type.pity_count() - self.count_after_5_star(index)
+    }
+
+    /// 距离四星保底还有多少次
+    pub fn count_to_4_star_pity(&self, index: u32) -> u32 {
+        self.banner_type.pity_count() - self.count_after_4_star(index)
     }
 }

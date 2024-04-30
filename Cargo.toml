@@ -24,3 +24,5 @@ enigo = { git = "https://github.com/enximi/enigo" }
 crossterm = "0.27.0"
 admin_runner = { git = "https://github.com/enximi/admin_runner" }
 xcap = "0.0.9"
+rust_xlsxwriter = "0.64.2"
+enum-iterator = "2.0.1"
