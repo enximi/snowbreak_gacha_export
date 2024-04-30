@@ -4,8 +4,6 @@ use rust_xlsxwriter::{Format, Workbook};
 use std::collections::HashMap;
 
 /// Save the records to an excel file.
-/// # Arguments
-/// * `records` - The records to save. 限定角色，限定武器，常驻角色，常驻武器，新手池
 pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
     let mut workbook = Workbook::new();
     // 五星格式

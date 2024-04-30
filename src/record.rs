@@ -105,14 +105,6 @@ impl GachaRecord {
         }
     }
 
-    pub fn readable_item_type_str(&self) -> String {
-        match self.item_type {
-            ItemType::Character => "角色",
-            ItemType::Weapon => "武器",
-        }
-        .to_string()
-    }
-
     pub fn readable_date_time_str(&self) -> String {
         let date_time = Local
             .timestamp_opt(self.timestamp as i64, 0)
