@@ -1,10 +1,14 @@
 # Snowbreak Gacha Export
 
+中文 | [English](doc/readme_en.md)
+
 尘白禁区抽卡记录导出工具
 
 仅支持1920x1080分辨率窗口化/无边框
 
 使用OCR识别
+
+只在使用简体中文的国际服测试过
 
 ## 使用方法
 
