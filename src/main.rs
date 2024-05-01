@@ -1,19 +1,17 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use admin_runner::{is_admin, run_as_admin};
 use anyhow::{anyhow, Result};
-use enigo::Coordinate::Abs;
-use enigo::{Button, Direction::Click, Enigo, Mouse, Settings};
+use enigo::{Button, Coordinate::Abs, Direction::Click, Enigo, Mouse, Settings};
 use enum_iterator::all;
 use image::DynamicImage;
-use lazy_static::lazy_static;
-use tokio::spawn;
-use tokio::time::sleep;
-use window_inspector::find::get_hwnd_ref_cache;
-use window_inspector::position_size::{get_client_xywh, get_window_xywh_include_shadow};
-use window_inspector::top_most::{cancel_window_top_most, set_window_top_most};
+use tokio::{spawn, time::sleep};
+use window_inspector::{
+    find::get_hwnd_ref_cache,
+    position_size::{get_client_xywh, get_window_xywh_include_shadow},
+    top_most::{cancel_window_top_most, set_window_top_most},
+};
 use xcap::Window;
 
 use crate::record::{merge_gacha_records, BannerType, GachaRecord, RecordScreen};

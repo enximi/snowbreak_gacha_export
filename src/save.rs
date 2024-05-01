@@ -17,7 +17,7 @@ pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
         worksheet
             .set_name(banner_type.chinese_display_name())
             .unwrap();
-        worksheet.write(0, 0, "星级").unwrap();
+        worksheet.write(0, 0, "品质").unwrap();
         worksheet.set_column_width(0, 5).unwrap();
         worksheet.write(0, 1, "名称").unwrap();
         worksheet.set_column_width(1, 20).unwrap();
