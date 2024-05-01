@@ -1,31 +1,64 @@
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
-use crate::config::{Language, CONFIG};
-use admin_runner::{is_admin, run_as_admin};
-use anyhow::{anyhow, Result};
-use enigo::{Button, Coordinate::Abs, Direction::Click, Enigo, Mouse, Settings};
+use admin_runner::is_admin;
+use admin_runner::run_as_admin;
+use anyhow::anyhow;
+use anyhow::Result;
+use enigo::Button;
+use enigo::Coordinate::Abs;
+use enigo::Direction::Click;
+use enigo::Enigo;
+use enigo::Mouse;
+use enigo::Settings;
 use enum_iterator::all;
 use image::DynamicImage;
-use tokio::{spawn, time::sleep};
-use window_inspector::{
-    find::get_hwnd_ref_cache,
-    position_size::{get_client_xywh, get_window_xywh_include_shadow},
-    top_most::{cancel_window_top_most, set_window_top_most},
-};
+use tokio::spawn;
+use tokio::time::sleep;
+use window_inspector::find::get_hwnd_ref_cache;
+use window_inspector::position_size::get_client_xywh;
+use window_inspector::position_size::get_window_xywh_include_shadow;
+use window_inspector::top_most::cancel_window_top_most;
+use window_inspector::top_most::set_window_top_most;
 use xcap::Window;
 
+use crate::config::Language;
+use crate::config::CONFIG;
 use crate::record::{merge_gacha_records, BannerType, GachaRecord, RecordScreen};
 use crate::save::{get_gache_records_from_file, save_excel};
+use crate::update::is_up_to_date;
 
 mod config;
 mod ocr_server;
 mod record;
 mod save;
+mod update;
 
 #[tokio::main]
 async fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
+    match is_up_to_date().await {
+        Ok((is_up_to_date, latest_version)) => {
+            if !is_up_to_date {
+                log::info!("New version available: {}", latest_version);
+                match CONFIG.language {
+                    Language::Zh => {
+                        println!("有新版本，请前往 https://github.com/enximi/snowbreak_gacha_export/releases 更新");
+                    }
+                    Language::En => {
+                        println!("New version available, please update in https://github.com/enximi/snowbreak_gacha_export/releases");
+                    }
+                }
+            } else {
+                log::info!("Already up to date, version: {}", env!("CARGO_PKG_VERSION"));
+            }
+        }
+        Err(_) => {
+            log::error!("Failed to check update");
+        }
+    }
 
     match CONFIG.language {
         Language::Zh => {
@@ -393,4 +426,16 @@ fn click_to_change_page(hwnd: isize, next_page: bool) {
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
     enigo.move_mouse(click_xy.0, click_xy.1, Abs).unwrap();
     enigo.button(Button::Left, Click).unwrap();
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let name = env!("CARGO_PKG_NAME");
+        let version = env!("CARGO_PKG_VERSION");
+        println!("{} {}", name, version);
+    }
 }
