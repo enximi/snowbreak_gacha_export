@@ -4,7 +4,7 @@
 
 Snowbreak Gacha Record Export Tool
 
-Supports only 1920x1080 resolution in windowed or borderless mode.
+Supports 16:9 resolution in windowed or borderless mode.
 
 Utilizes OCR for recognition.
 

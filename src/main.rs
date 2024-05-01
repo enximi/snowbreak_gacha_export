@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use admin_runner::{is_admin, run_as_admin};
@@ -7,12 +8,11 @@ use enigo::Coordinate::Abs;
 use enigo::{Button, Direction::Click, Enigo, Mouse, Settings};
 use enum_iterator::all;
 use image::DynamicImage;
+use lazy_static::lazy_static;
 use tokio::spawn;
 use tokio::time::sleep;
 use window_inspector::find::get_hwnd_ref_cache;
-use window_inspector::position_size::{
-    get_client_xy, get_client_xywh, get_window_xywh_include_shadow,
-};
+use window_inspector::position_size::{get_client_xywh, get_window_xywh_include_shadow};
 use window_inspector::top_most::{cancel_window_top_most, set_window_top_most};
 use xcap::Window;
 
@@ -109,16 +109,10 @@ async fn main() {
                 log::info!("click to back to the screen 1");
                 // back to the first screen
                 let mut click_time = 0;
-                let mut enigo = Enigo::new(&Settings::default()).unwrap();
-                // let screen_size = enigo.main_display().unwrap();
                 loop {
-                    let client_xy = get_client_xy(hwnd).unwrap();
-                    enigo
-                        .move_mouse(1665 + client_xy.0, 425 + client_xy.1, Abs)
-                        .unwrap();
-                    enigo.button(Button::Left, Click).unwrap();
+                    click_to_change_page(hwnd, false);
+                    sleep(Duration::from_millis(100)).await;
                     click_time += 1;
-                    sleep(Duration::from_secs_f32(0.2)).await;
                     let img = client_img(window).unwrap();
                     let record_screen = RecordScreen::new(img);
                     let index = record_screen.index().await.unwrap();
@@ -149,14 +143,9 @@ async fn main() {
         }
     };
 
-    let mut enigo = Enigo::new(&Settings::default()).unwrap();
     'outer: loop {
-        let client_xy = get_client_xy(hwnd).unwrap();
-        enigo
-            .move_mouse(1665 + client_xy.0, 616 + client_xy.1, Abs)
-            .unwrap();
-        enigo.button(Button::Left, Click).unwrap();
-        sleep(Duration::from_millis(200)).await;
+        click_to_change_page(hwnd, true);
+        sleep(Duration::from_millis(100)).await;
         let start = Instant::now();
         loop {
             let img = client_img(window).unwrap();
@@ -353,5 +342,37 @@ fn client_img(window: &Window) -> Result<DynamicImage> {
         client_xywh.2,
         client_xywh.3,
     );
+    let img_size = (img.width(), img.height());
+    let ratio = num_rational::Ratio::new(img_size.0 as i64, img_size.1 as i64);
+    if ratio != num_rational::Ratio::new(16, 9) {
+        return Err(anyhow!("image ratio not 16:9, ratio: {:?}", ratio));
+    }
+    let img = if img_size.0 != 1920 {
+        img.resize_exact(1920, 1080, image::imageops::FilterType::Nearest)
+    } else {
+        img
+    };
     Ok(img)
+}
+
+lazy_static! {
+    static ref ENIGO: Mutex<Enigo> = Mutex::new(Enigo::new(&Settings::default()).unwrap());
+}
+
+fn click_to_change_page(hwnd: isize, next_page: bool) {
+    let click_xy_1080 = if next_page { (1665, 616) } else { (1665, 425) };
+    let client_xywh = get_client_xywh(hwnd).unwrap();
+    let click_xy = (
+        ((click_xy_1080.0 * client_xywh.2 + client_xywh.2 / 2) / 1920) as i32 + client_xywh.0,
+        ((click_xy_1080.1 * client_xywh.3 + client_xywh.3 / 2) / 1080) as i32 + client_xywh.1,
+    );
+    // let mut enigo = Enigo::new(&Settings::default()).unwrap();
+    // enigo.move_mouse(click_xy.0, click_xy.1, Abs).unwrap();
+    // enigo.button(Button::Left, Click).unwrap();
+    ENIGO
+        .lock()
+        .unwrap()
+        .move_mouse(click_xy.0, click_xy.1, Abs)
+        .unwrap();
+    ENIGO.lock().unwrap().button(Button::Left, Click).unwrap();
 }
