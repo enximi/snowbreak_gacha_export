@@ -46,7 +46,18 @@ impl BannerType {
         }
         .to_string()
     }
-    
+
+    pub fn english_display_name(&self) -> String {
+        match self {
+            BannerType::LimitedTimeCharacter => "Limited Time Character",
+            BannerType::LimitedTimeWeapon => "Limited Time Weapon",
+            BannerType::StandardCharacter => "Standard Character",
+            BannerType::StandardWeapon => "Standard Weapon",
+            BannerType::Novice => "Novice",
+        }
+        .to_string()
+    }
+
     pub fn save_file_name(&self) -> String {
         match self {
             BannerType::LimitedTimeCharacter => "limited_time_character",
@@ -81,6 +92,14 @@ impl ItemType {
         match self {
             ItemType::Character => "角色",
             ItemType::Weapon => "武器",
+        }
+        .to_string()
+    }
+    
+    pub fn english_display_name(&self) -> String {
+        match self {
+            ItemType::Character => "Operative",
+            ItemType::Weapon => "Weapon",
         }
         .to_string()
     }
@@ -298,10 +317,6 @@ impl RecordScreen {
         Self { img }
     }
 
-    pub fn img(&self) -> &DynamicImage {
-        &self.img
-    }
-
     fn index_image(&self) -> DynamicImage {
         self.img.crop_imm(1625, 480, 80, 80)
     }
@@ -414,10 +429,6 @@ impl GachaRecords {
         }
     }
 
-    pub fn banner_type(&self) -> BannerType {
-        self.banner_type
-    }
-    
     pub fn records(&self) -> &Vec<GachaRecord> {
         &self.records
     }
@@ -454,7 +465,7 @@ impl GachaRecords {
     }
 
     /// 距离四星保底还有多少次
-    pub fn count_to_4_star_pity(&self, index: u32) -> u32 {
+    pub fn _count_to_4_star_pity(&self, index: u32) -> u32 {
         10 - self.count_after_4_star(index)
     }
 }

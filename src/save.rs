@@ -1,7 +1,32 @@
+use crate::config::{Language, CONFIG};
 use crate::record::{BannerType, GachaRecord, GachaRecords};
 use enum_iterator::all;
 use rust_xlsxwriter::{Format, Workbook};
 use std::collections::HashMap;
+
+fn chinese_headers() -> Vec<&'static str> {
+    vec![
+        "品质",
+        "名称",
+        "类型",
+        "时间",
+        "5星保底内抽数",
+        "距5星保底还剩",
+        "4星保底内抽数",
+    ]
+}
+
+fn english_headers() -> Vec<&'static str> {
+    vec![
+        "Tier",
+        "Name",
+        "Type",
+        "Time",
+        "Count to 5 star pity",
+        "Count after 5 star",
+        "Count to 4 star pity",
+    ]
+}
 
 /// Save the records to an excel file.
 pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
@@ -15,24 +40,23 @@ pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
     all::<BannerType>().for_each(|banner_type: BannerType| {
         let worksheet = workbook.add_worksheet();
         worksheet
-            .set_name(banner_type.chinese_display_name())
+            // .set_name(banner_type.chinese_display_name())
+            .set_name(match CONFIG.language {
+                Language::Zh => banner_type.chinese_display_name(),
+                Language::En => banner_type.english_display_name(),
+            })
             .unwrap();
-        worksheet.write(0, 0, "品质").unwrap();
-        worksheet.set_column_width(0, 5).unwrap();
-        worksheet.write(0, 1, "名称").unwrap();
-        worksheet.set_column_width(1, 20).unwrap();
-        worksheet.write(0, 2, "类型").unwrap();
-        worksheet.set_column_width(2, 5).unwrap();
-        worksheet.write(0, 3, "时间").unwrap();
-        worksheet.set_column_width(3, 20).unwrap();
-        worksheet.write(0, 4, "5星保底内抽数").unwrap();
-        worksheet.set_column_width(4, 14).unwrap();
-        worksheet.write(0, 5, "距5星保底还剩").unwrap();
-        worksheet.set_column_width(5, 14).unwrap();
-        worksheet.write(0, 6, "4星保底内抽数").unwrap();
-        worksheet.set_column_width(6, 14).unwrap();
-        // worksheet.write(0, 7, "距4星保底还剩").unwrap();
-        // worksheet.set_column_width(7, 14).unwrap();
+        let headers = match CONFIG.language {
+            Language::Zh => chinese_headers(),
+            Language::En => english_headers(),
+        };
+        let colum_widths = [5, 20, 5, 20, 14, 14, 14];
+        for i in 0..headers.len() {
+            worksheet.write(0, i as u16, headers[i]).unwrap();
+            worksheet
+                .set_column_width(i as u16, colum_widths[i])
+                .unwrap();
+        }
         let records = GachaRecords::new(
             banner_type,
             records.get(&banner_type).unwrap_or(&vec![]).clone(),
@@ -53,7 +77,15 @@ pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
                 .write_with_format(i + 1, 1, record.item_name.clone(), format)
                 .unwrap();
             worksheet
-                .write_with_format(i + 1, 2, record.item_type.chinese_display_name(), format)
+                .write_with_format(
+                    i + 1,
+                    2,
+                    match CONFIG.language {
+                        Language::Zh => record.item_type.chinese_display_name(),
+                        Language::En => record.item_type.english_display_name(),
+                    },
+                    format,
+                )
                 .unwrap();
             worksheet
                 .write_with_format(i + 1, 3, record.readable_date_time_str(), format)
@@ -67,9 +99,6 @@ pub fn save_excel(records: HashMap<BannerType, Vec<GachaRecord>>) {
             worksheet
                 .write_with_format(i + 1, 6, records.count_after_4_star(i), format)
                 .unwrap();
-            // worksheet
-            //     .write_with_format(i + 1, 7, records.count_to_4_star_pity(i), format)
-            //     .unwrap();
         }
     });
     workbook.save("gacha_records.xlsx").unwrap()

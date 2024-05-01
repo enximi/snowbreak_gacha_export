@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use crate::config::{Language, CONFIG};
 use admin_runner::{is_admin, run_as_admin};
 use anyhow::{anyhow, Result};
 use enigo::{Button, Coordinate::Abs, Direction::Click, Enigo, Mouse, Settings};
@@ -17,6 +18,7 @@ use xcap::Window;
 use crate::record::{merge_gacha_records, BannerType, GachaRecord, RecordScreen};
 use crate::save::{get_gache_records_from_file, save_excel};
 
+mod config;
 mod ocr_server;
 mod record;
 mod save;
@@ -25,8 +27,16 @@ mod save;
 async fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    println!("仅支持1920x1080窗口化/无边框");
-    println!("先打开抽卡记录界面，后运行本程序");
+    match CONFIG.language {
+        Language::Zh => {
+            println!("仅支持 16:9 窗口化/无边框");
+            println!("先打开抽卡记录界面，后运行本程序");
+        }
+        Language::En => {
+            println!("Only support 16:9 windowed/borderless");
+            println!("Open the gacha record interface first, then run this program");
+        }
+    }
 
     // 管理员权限
     if is_admin() {
@@ -60,9 +70,30 @@ async fn main() {
         }
     };
 
-    println!(
-        "按下数字键选择卡池类型（1：角色活动，2：武器活动，3：角色常驻，4：武器常驻，5：新手）"
-    );
+    let print_select_banner_type_hint = || match CONFIG.language {
+        Language::Zh => {
+            println!(
+                "按下数字键选择卡池类型（1：{}，2：{}，3：{}，4：{}，5：{}）",
+                BannerType::LimitedTimeCharacter.chinese_display_name(),
+                BannerType::LimitedTimeWeapon.chinese_display_name(),
+                BannerType::StandardCharacter.chinese_display_name(),
+                BannerType::StandardWeapon.chinese_display_name(),
+                BannerType::Novice.chinese_display_name(),
+            );
+        }
+        Language::En => {
+            println!(
+                    "Press the number key to select the banner type (1: {}, 2: {}, 3: {}, 4: {}, 5: {})",
+                    BannerType::LimitedTimeCharacter.english_display_name(),
+                    BannerType::LimitedTimeWeapon.english_display_name(),
+                    BannerType::StandardCharacter.english_display_name(),
+                    BannerType::StandardWeapon.english_display_name(),
+                    BannerType::Novice.english_display_name(),
+                );
+        }
+    };
+
+    print_select_banner_type_hint();
 
     consume_all_events();
     let user_selected_banner_type = loop {
@@ -75,7 +106,7 @@ async fn main() {
                 crossterm::event::KeyCode::Char('5') => break BannerType::Novice,
                 _ => {
                     log::warn!("Invalid input: {:?}", event.code);
-                    println!("Invalid input, please input again");
+                    print_select_banner_type_hint();
                 }
             }
         }
@@ -290,17 +321,20 @@ fn get_game_window_info() -> Result<(isize, String, String)> {
 }
 
 /// 消耗所有已经存在的事件
-fn consume_all_events() {
+pub fn consume_all_events() {
     while crossterm::event::poll(Duration::from_millis(10)).unwrap() {
         let _ = crossterm::event::read().unwrap();
     }
 }
 
-fn wait_any_key() {
+pub fn wait_any_key() {
     // 使用 cargo run 启动时，会有一个 enter 事件
     consume_all_events();
 
-    println!("press any key to exit");
+    match CONFIG.language {
+        Language::Zh => println!("按下任意键退出"),
+        Language::En => println!("Press any key to exit"),
+    }
     // 等待任意一个键
     loop {
         if let Ok(crossterm::event::Event::Key(_)) = crossterm::event::read() {
