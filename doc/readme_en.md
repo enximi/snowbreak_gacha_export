@@ -10,7 +10,7 @@ Utilizes OCR for recognition.
 
 Tested only on the international server using Simplified Chinese.
 
-# How to Use
+## How to Use
 
 Download, unzip, and run. Gacha records will be saved in the `gacha_records` folder.
 
