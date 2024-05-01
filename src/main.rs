@@ -111,7 +111,7 @@ async fn main() {
                 let mut click_time = 0;
                 loop {
                     click_to_change_page(hwnd, false);
-                    sleep(Duration::from_millis(100)).await;
+                    sleep(Duration::from_millis(200)).await;
                     click_time += 1;
                     let img = client_img(window).unwrap();
                     let record_screen = RecordScreen::new(img);
@@ -119,10 +119,6 @@ async fn main() {
                     if index == 1 {
                         log::info!("back to the first screen");
                         record_screens.push(record_screen.clone());
-                        record_screen
-                            .img()
-                            .save("back_to_first_screen.png")
-                            .unwrap();
                         break;
                     }
                     if click_time > 20 {
@@ -145,7 +141,7 @@ async fn main() {
 
     'outer: loop {
         click_to_change_page(hwnd, true);
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(200)).await;
         let start = Instant::now();
         loop {
             let img = client_img(window).unwrap();
@@ -355,10 +351,6 @@ fn client_img(window: &Window) -> Result<DynamicImage> {
     Ok(img)
 }
 
-lazy_static! {
-    static ref ENIGO: Mutex<Enigo> = Mutex::new(Enigo::new(&Settings::default()).unwrap());
-}
-
 fn click_to_change_page(hwnd: isize, next_page: bool) {
     let click_xy_1080 = if next_page { (1665, 616) } else { (1665, 425) };
     let client_xywh = get_client_xywh(hwnd).unwrap();
@@ -366,13 +358,7 @@ fn click_to_change_page(hwnd: isize, next_page: bool) {
         ((click_xy_1080.0 * client_xywh.2 + client_xywh.2 / 2) / 1920) as i32 + client_xywh.0,
         ((click_xy_1080.1 * client_xywh.3 + client_xywh.3 / 2) / 1080) as i32 + client_xywh.1,
     );
-    // let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    // enigo.move_mouse(click_xy.0, click_xy.1, Abs).unwrap();
-    // enigo.button(Button::Left, Click).unwrap();
-    ENIGO
-        .lock()
-        .unwrap()
-        .move_mouse(click_xy.0, click_xy.1, Abs)
-        .unwrap();
-    ENIGO.lock().unwrap().button(Button::Left, Click).unwrap();
+    let mut enigo = Enigo::new(&Settings::default()).unwrap();
+    enigo.move_mouse(click_xy.0, click_xy.1, Abs).unwrap();
+    enigo.button(Button::Left, Click).unwrap();
 }
