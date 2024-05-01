@@ -60,8 +60,8 @@ impl BannerType {
 
     pub fn pity_count(&self) -> u32 {
         match self {
-            BannerType::LimitedTimeCharacter | BannerType::LimitedTimeWeapon => 80,
-            BannerType::StandardCharacter | BannerType::StandardWeapon => 60,
+            BannerType::LimitedTimeCharacter | BannerType::StandardCharacter => 80,
+            BannerType::LimitedTimeWeapon | BannerType::StandardWeapon => 60,
             BannerType::Novice => 50,
         }
     }
