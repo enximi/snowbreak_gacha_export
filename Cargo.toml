@@ -1,6 +1,6 @@
 [package]
 name = "snowbreak_gacha_export"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -23,9 +23,9 @@ env_logger = "0.11.3"
 enigo = { git = "https://github.com/enximi/enigo" }
 crossterm = "0.27.0"
 admin_runner = { git = "https://github.com/enximi/admin_runner" }
-xcap = "0.0.9"
 rust_xlsxwriter = "0.64.2"
 enum-iterator = "2.1.0"
 num-rational = "0.4.1"
 semver = "1.0.22"
 reqwest = "0.12.4"
+client_capture = { git = "https://github.com/enximi/client_capture" }

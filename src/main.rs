@@ -6,6 +6,7 @@ use admin_runner::is_admin;
 use admin_runner::run_as_admin;
 use anyhow::anyhow;
 use anyhow::Result;
+use client_capture::ClientCapture;
 use enigo::Button;
 use enigo::Coordinate::Abs;
 use enigo::Direction::Click;
@@ -18,10 +19,8 @@ use tokio::spawn;
 use tokio::time::sleep;
 use window_inspector::find::get_hwnd_ref_cache;
 use window_inspector::position_size::get_client_xywh;
-use window_inspector::position_size::get_window_xywh_include_shadow;
 use window_inspector::top_most::cancel_window_top_most;
 use window_inspector::top_most::set_window_top_most;
-use xcap::Window;
 
 use crate::config::Language;
 use crate::config::CONFIG;
@@ -39,6 +38,7 @@ mod update;
 async fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
+    // 检查更新
     match is_up_to_date().await {
         Ok((is_up_to_date, latest_version)) => {
             if !is_up_to_date {
@@ -60,6 +60,7 @@ async fn main() {
         }
     }
 
+    // 用户提示
     match CONFIG.language {
         Language::Zh => {
             println!("仅支持 16:9 窗口化/无边框");
@@ -91,7 +92,8 @@ async fn main() {
         };
     }
 
-    let (hwnd, _, _) = match get_game_window_info() {
+    // 获取游戏窗口
+    let (hwnd, window_title, _) = match get_game_window_info() {
         Ok((hwnd, title, remark)) => {
             log::info!("Game: {}, window title: {}", remark, title);
             (hwnd, title, remark)
@@ -103,6 +105,7 @@ async fn main() {
         }
     };
 
+    // 选择卡池类型
     let print_select_banner_type_hint = || match CONFIG.language {
         Language::Zh => {
             println!(
@@ -151,15 +154,25 @@ async fn main() {
     set_window_top_most(hwnd).unwrap();
     cancel_window_top_most(hwnd).unwrap();
 
-    let windows = Window::all().unwrap();
-    let window = windows
-        .iter()
-        .find(|window| window.id() == hwnd as u32)
-        .unwrap();
+    // 创建截图工具
+    let mut client_capture =
+        ClientCapture::new("UnrealWindow".to_string(), window_title, None, None);
+    client_capture.start().unwrap();
+    log::info!("等待截图工具启动...");
+    let start = Instant::now();
+    while client_capture.get_img().is_err() {
+        sleep(Duration::from_millis(500)).await;
+        if start.elapsed().as_secs() > 5 {
+            log::error!("截图工具启动超时");
+            wait_any_key();
+            return;
+        }
+    }
 
     let mut record_screens = vec![];
 
-    let img = client_img(window).unwrap();
+    // 获取第一个界面，如果不是第一个界面，回到第一个界面
+    let img = client_img(&mut client_capture).unwrap();
     let record_screen = RecordScreen::new(img);
     match record_screen.index().await {
         Ok(index) => {
@@ -175,7 +188,7 @@ async fn main() {
                     click_to_change_page(hwnd, false);
                     sleep(Duration::from_millis(200)).await;
                     click_time += 1;
-                    let img = client_img(window).unwrap();
+                    let img = client_capture.get_img().unwrap();
                     let record_screen = RecordScreen::new(img);
                     let index = record_screen.index().await.unwrap();
                     if index == 1 {
@@ -201,12 +214,13 @@ async fn main() {
         }
     };
 
+    // 点击到最后一页
     'outer: loop {
         click_to_change_page(hwnd, true);
         sleep(Duration::from_millis(200)).await;
         let start = Instant::now();
         loop {
-            let img = client_img(window).unwrap();
+            let img = client_img(&mut client_capture).unwrap();
             let record_screen = RecordScreen::new(img);
             let index = record_screen.index().await.unwrap();
             log::debug!("index: {}", index);
@@ -220,6 +234,9 @@ async fn main() {
             }
         }
     }
+
+    // 停止截图，释放资源
+    client_capture.stop();
 
     log::debug!("record_screens.len(): {}", record_screens.len());
 
@@ -376,33 +393,9 @@ pub fn wait_any_key() {
     }
 }
 
-fn client_img(window: &Window) -> Result<DynamicImage> {
-    let img = window.capture_image()?;
-    let window_xywh = get_window_xywh_include_shadow(window.id() as isize)?;
-    // check window size
-    let img_size = (img.width(), img.height());
-    if img_size.0 != window_xywh.2 || img_size.1 != window_xywh.3 {
-        return Err(anyhow!(
-            "window size not match, window_xywh: {:?}, img_wh: {:?}",
-            window_xywh,
-            img_size
-        ));
-    }
-    let client_xywh = get_client_xywh(window.id() as isize)?;
-    // check client in window
-    if client_xywh.0 < window_xywh.0
-        || client_xywh.1 < window_xywh.1
-        || client_xywh.0 + client_xywh.2 as i32 > window_xywh.0 + window_xywh.2 as i32
-        || client_xywh.1 + client_xywh.3 as i32 > window_xywh.1 + window_xywh.3 as i32
-    {
-        return Err(anyhow!("client out of window"));
-    }
-    let img = DynamicImage::ImageRgba8(img).crop_imm(
-        (client_xywh.0 - window_xywh.0) as u32,
-        (client_xywh.1 - window_xywh.1) as u32,
-        client_xywh.2,
-        client_xywh.3,
-    );
+/// 获取截图，调整大小为 1920x1080
+fn client_img(client_capture: &mut ClientCapture) -> Result<DynamicImage> {
+    let img = client_capture.get_img()?;
     let img_size = (img.width(), img.height());
     let ratio = num_rational::Ratio::new(img_size.0 as i64, img_size.1 as i64);
     if ratio != num_rational::Ratio::new(16, 9) {
