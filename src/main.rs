@@ -426,15 +426,3 @@ fn click_to_change_page(hwnd: isize, next_page: bool) {
     enigo.move_mouse(click_xy.0, click_xy.1, Abs).unwrap();
     enigo.button(Button::Left, Click).unwrap();
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test() {
-        let name = env!("CARGO_PKG_NAME");
-        let version = env!("CARGO_PKG_VERSION");
-        println!("{} {}", name, version);
-    }
-}

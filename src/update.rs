@@ -30,6 +30,7 @@ pub async fn is_up_to_date() -> Result<(bool, String), Box<dyn std::error::Error
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
