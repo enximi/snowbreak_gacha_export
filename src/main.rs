@@ -155,8 +155,14 @@ async fn main() {
     cancel_window_top_most(hwnd).unwrap();
 
     // 创建截图工具
-    let mut client_capture =
-        ClientCapture::new("UnrealWindow".to_string(), window_title, None, None);
+    let mut client_capture = ClientCapture::new(
+        "UnrealWindow".to_string(),
+        window_title,
+        None,
+        None,
+        Some(false),
+        None,
+    );
     client_capture.start().unwrap();
     log::info!("等待截图工具启动...");
     let start = Instant::now();

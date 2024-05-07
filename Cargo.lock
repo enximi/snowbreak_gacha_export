@@ -306,7 +306,7 @@ dependencies = [
 [[package]]
 name = "client_capture"
 version = "0.1.0"
-source = "git+https://github.com/enximi/client_capture#46517c5eb2cc9fb9f537c6a1f3befb8cb833be84"
+source = "git+https://github.com/enximi/client_capture?rev=35c0954a42c6f47b3684e3d2cbabb05095a03043#35c0954a42c6f47b3684e3d2cbabb05095a03043"
 dependencies = [
  "anyhow",
  "image",
