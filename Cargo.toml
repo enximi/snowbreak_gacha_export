@@ -1,31 +1,28 @@
 [package]
 name = "snowbreak_gacha_export"
-version = "0.1.8"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 chrono = "0.4.38"
-anyhow = "1.0.83"
+anyhow = "1.0.86"
 image = "0.25.1"
-paddleocr = "0.4.1"
-base64 = "0.22.1"
-serde_json = "1.0.116"
-serde = { version = "1.0.200", features = ["derive"] }
-csv = "1.3.0"
-tokio = { version = "1.37.0", features = ["full"] }
-futures = "0.3.30"
+imageproc = "0.25.0"
+serde_json = "1.0.117"
+serde = { version = "1.0.203", features = ["derive"] }
+tokio = { version = "1.38.0", features = ["full"] }
 lazy_static = "1.4.0"
 window_inspector = { git = "https://github.com/enximi/window_inspector" }
 log = "0.4.21"
 env_logger = "0.11.3"
 enigo = { git = "https://github.com/enximi/enigo" }
-crossterm = "0.27.0"
 admin_runner = { git = "https://github.com/enximi/admin_runner" }
-rust_xlsxwriter = "0.64.2"
+rust_xlsxwriter = "0.67.0"
 enum-iterator = "2.1.0"
-num-rational = "0.4.1"
+num-rational = "0.4.2"
 semver = "1.0.23"
-reqwest = "0.12.4"
+reqwest = "0.12.5"
 client_capture = { git = "https://github.com/enximi/client_capture", rev = "35c0954a42c6f47b3684e3d2cbabb05095a03043" }
+simple_ocr = { git = "https://github.com/enximi/simple_ocr" }
