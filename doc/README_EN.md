@@ -12,7 +12,7 @@ Tested only on the international server using Simplified Chinese.
 
 ## How to Use
 
-Download, unzip, and run.
+Download, and run.
 
 Gacha records will be saved in the `records/records.json` file.
 
