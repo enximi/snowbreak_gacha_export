@@ -32,7 +32,7 @@ mod user_interaction;
 #[tokio::main]
 async fn main() {
     env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or("snowbreak_gacha_export=debug"),
+        env_logger::Env::default().default_filter_or("snowbreak_gacha_export=info"),
     )
     .init();
 
