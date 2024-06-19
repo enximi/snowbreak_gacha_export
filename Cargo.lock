@@ -513,8 +513,9 @@ dependencies = [
 
 [[package]]
 name = "enigo"
-version = "0.2.0"
-source = "git+https://github.com/enximi/enigo#bf6e7b4a99f69a42d44e0c2883e720b224b2aacd"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0087a01fc8591217447d28005379fb5a183683cc83f0a4707af28cc6603f70fb"
 dependencies = [
  "core-graphics",
  "foreign-types-shared 0.3.1",
@@ -1912,9 +1913,9 @@ dependencies = [
 
 [[package]]
 name = "rust_xlsxwriter"
-version = "0.67.0"
+version = "0.68.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05208955a4ca51dfad36960bdae24d9d257d43225711c6f70ed15c5115478384"
+checksum = "e1f12ee0cffaffabab8ca54617afb946cd04e62aa0edd68f161fb10d032ea9e0"
 dependencies = [
  "regex",
  "zip",
@@ -2182,7 +2183,7 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "snowbreak_gacha_export"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "admin_runner",
  "anyhow",

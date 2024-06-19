@@ -16,7 +16,7 @@ use crate::record::TotalRecords;
 use crate::record_image::RecordImage;
 use crate::save::save_excel;
 use crate::update::is_up_to_date;
-use crate::user_interaction::{banner_type, wait_enter};
+use crate::user_interaction::{account_id, banner_type, wait_enter};
 
 mod action;
 mod capture;
@@ -101,11 +101,16 @@ async fn main() {
         }
     };
 
+    // 读取或初始化记录
+    let mut total_record = TotalRecords::read_or_default();
+
+    let account_ids = total_record.records.keys().cloned().collect::<Vec<_>>();
+    let account_id = account_id(language, account_ids);
+    log::info!("account id: {account_id}");
+
     // 选择卡池类型
     let user_selected_banner_type = banner_type(language);
-    log::info!("Selected banner type: {:?}", user_selected_banner_type);
-
-    let account_id = "default_account_id";
+    log::info!("banner type: {:?}", user_selected_banner_type);
 
     // 游戏窗口置顶
     set_window_top_most(hwnd).unwrap();
@@ -172,7 +177,6 @@ async fn main() {
         .collect::<Vec<_>>();
     log::info!("ocr spend: {:?}", start.elapsed());
 
-    let mut total_record = TotalRecords::read_or_default();
     match total_record.add_record(account_id.to_string(), user_selected_banner_type, records) {
         Ok(add_num) => {
             log::info!("add {} records", add_num);
@@ -186,6 +190,6 @@ async fn main() {
     total_record.save().unwrap();
 
     save_excel(total_record, language);
-    
+
     wait_enter(language);
 }

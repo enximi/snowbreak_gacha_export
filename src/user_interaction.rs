@@ -91,7 +91,7 @@ pub fn banner_type(language: Language) -> BannerType {
     }
 }
 
-pub fn account_id(language: Language) -> String {
+pub fn input_account_id(language: Language) -> String {
     loop {
         let tip = match language {
             Language::ChineseSimplified => "输入账号ID：",
@@ -122,4 +122,86 @@ pub fn wait_enter(language: Language) {
     println!("{}", tip);
     let mut input = String::new();
     stdin().read_line(&mut input).unwrap();
+}
+
+fn select_account_id(language: Language, account_ids: Vec<String>) -> String {
+    let tip = vec![match language {
+        Language::ChineseSimplified => "输入数字选择账号",
+        Language::English => "Input a number to select account",
+    }
+    .to_string()]
+    .into_iter()
+    .chain(
+        account_ids
+            .iter()
+            .enumerate()
+            .map(|(i, account_id)| format!("{}. {}", i + 1, account_id)),
+    )
+    .collect::<Vec<String>>()
+    .join("\n");
+    println!("{}", tip);
+    loop {
+        let mut input = String::new();
+        print_input_tip(language);
+        stdout().flush().unwrap();
+        stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+        match input.parse::<usize>() {
+            Ok(index) => {
+                if index > 0 && index <= account_ids.len() {
+                    return account_ids[index - 1].clone();
+                } else {
+                    print_invalid_input(input.to_string(), language);
+                }
+            }
+            Err(_) => {
+                print_invalid_input(input.to_string(), language);
+            }
+        }
+    }
+}
+
+pub fn account_id(language: Language, account_ids: Vec<String>) -> String {
+    if account_ids.is_empty() {
+        let tip = match language {
+            Language::ChineseSimplified => "没有账号ID",
+            Language::English => "No account ID",
+        };
+        println!("{}", tip);
+        input_account_id(language)
+    } else {
+        let tip = match language {
+            Language::ChineseSimplified => "已有账号ID：",
+            Language::English => "Existing account IDs:",
+        };
+        println!("{}", tip);
+        for (i, account_id) in account_ids.iter().enumerate() {
+            println!("{}. {}", i + 1, account_id);
+        }
+        let tip = match language {
+            Language::ChineseSimplified => "输入1以选择已有账号，输入2以输入新账号",
+            Language::English => {
+                "Input 1 to select an existing account, input 2 to input a new account"
+            }
+        };
+        println!("{}", tip);
+        loop {
+            let mut input = String::new();
+            print_input_tip(language);
+            stdout().flush().unwrap();
+            stdin().read_line(&mut input).unwrap();
+            let input = input.trim();
+            match input {
+                "1" => {
+                    return select_account_id(language, account_ids);
+                }
+                "2" => {
+                    return input_account_id(language);
+                }
+                _ => {
+                    print_invalid_input(input.to_string(), language);
+                }
+            }
+        }
+    }
 }

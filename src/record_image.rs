@@ -260,7 +260,7 @@ mod test {
             .collect::<Vec<_>>();
         let image_file_paths = vec![Path::new("not_in_git/images/image_7.png")];
         for image_file_path in image_file_paths {
-            let image = image::open(&image_file_path).unwrap();
+            let image = image::open(image_file_path).unwrap();
             let record_image = RecordImage::new(image);
             println!("image: {:?}", image_file_path);
             if !record_image.is_record_image() {

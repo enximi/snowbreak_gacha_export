@@ -14,7 +14,7 @@ impl Config {
     pub fn set_language(&mut self, language: Language) {
         self.language = language;
     }
-    
+
     pub fn load_config() -> Result<Self> {
         let path = "config.json";
         let file = std::fs::File::open(path)?;
@@ -31,14 +31,19 @@ impl Config {
         let path = "config.json";
         let file = std::fs::File::create(path)?;
         let writer = std::io::BufWriter::new(file);
-        serde_json::to_writer(writer, self).map_err(|e| e.into())
+        serde_json::to_writer_pretty(writer, self).map_err(|e| e.into())
     }
 
     pub fn load_or_init_config() -> Self {
         let is_config_file_exists = Self::is_config_file_exists();
         let config_res = Self::load_config();
-        if is_config_file_exists && config_res.is_ok() {
-            return config_res.unwrap();
+        if is_config_file_exists {
+            match config_res {
+                Ok(config) => return config,
+                Err(e) => {
+                    log::error!("Failed to load config: {}", e);
+                }
+            }
         }
         let mut config = Self::default();
         let language = language();
