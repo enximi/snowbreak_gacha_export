@@ -1,6 +1,6 @@
 # Snowbreak Gacha Export
 
-[中文](../README) | English
+[中文](../README.md) | English
 
 Snowbreak Gacha Record Export Tool
 

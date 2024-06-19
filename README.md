@@ -1,6 +1,6 @@
 # Snowbreak Gacha Export
 
-中文 | [English](doc/README_EN)
+中文 | [English](doc/README_EN.md)
 
 尘白禁区抽卡记录导出工具
 
