@@ -10,6 +10,14 @@ Utilizes OCR for recognition.
 
 Tested only on the international server using Simplified Chinese.
 
+## Features
+
+- [x] Gacha record export
+- [x] Merge new gacha records
+- [x] Multi-account support
+- [x] Display records in a more readable format (records.xlsx)
+- [ ] Use command line arguments to run
+
 ## How to Use
 
 Download, and run.
